@@ -1,5 +1,5 @@
 ﻿using BatchOptimization.Api.Data;
-using BatchOptimization.Api.DTOs;
+using BatchOptimization.Api.DTOs.User;
 using BatchOptimization.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;

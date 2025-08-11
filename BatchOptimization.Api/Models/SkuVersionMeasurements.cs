@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace BatchOptimization.Api.Models;
 
@@ -12,6 +13,8 @@ public partial class SkuVersionMeasurements
     public string MeasurementType { get; set; } = null!;
 
     public double? MeasurementValue { get; set; }
+
+    [JsonIgnore]
 
     public virtual SkuVersions SkuVersion { get; set; } = null!;
 }

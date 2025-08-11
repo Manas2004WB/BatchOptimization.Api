@@ -1,4 +1,4 @@
-﻿namespace BatchOptimization.Api.DTOs
+﻿namespace BatchOptimization.Api.DTOs.User
 {
         public class UserCreateDto
         {

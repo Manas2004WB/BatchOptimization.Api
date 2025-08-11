@@ -34,8 +34,10 @@ namespace BatchOptimization.Api.Controllers
             return Ok(new LoginResponseDto
             {
                 Token = token,
+                UserId = user.UserId,
                 Username = user.Username,
-                Role = user.UserRole.RoleName
+                Role = user.UserRole.RoleName,
+                Email = user.Email,
             });
         }
     }
