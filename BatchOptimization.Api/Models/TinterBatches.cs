@@ -25,7 +25,7 @@ public partial class TinterBatches
 
     public DateTime? UpdatedAt { get; set; }
 
-    public int UpdatedBy { get; set; }
+    public int? UpdatedBy { get; set; }
 
     public virtual Users CreatedByNavigation { get; set; } = null!;
 

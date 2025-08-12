@@ -103,5 +103,18 @@ namespace BatchOptimization.Api.Controllers
             return NoContent();
 
         }
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> GetSkuVersionWithMeasurements(int id)
+        {
+            var skuVersion = await _context.SkuVersions
+                .Include(sv => sv.SkuVersionMeasurements) // Load related measurements
+                .FirstOrDefaultAsync(sv => sv.SkuVersionId == id);
+
+            if (skuVersion == null)
+                return NotFound($"SkuVersion with ID {id} not found.");
+
+            return Ok(skuVersion);
+        }
+
     }
 }

@@ -26,7 +26,7 @@ namespace BatchOptimization.Api.Controllers
             var skus = await _context.Skus.ToListAsync();
             return Ok(skus);
         }
-        [HttpGet("{id:int}")]
+        [HttpGet("/get1/{id:int}")]
         public async Task<IActionResult> GetSkuById(int id)
         {
             var sku = await _context.Skus
@@ -34,7 +34,8 @@ namespace BatchOptimization.Api.Controllers
                 .Select(s => new {
                     s.SkuId,
                     s.SkuName,
-                    SkuVersions = s.SkuVersions.Select(v => new {
+                    SkuVersions = s.SkuVersions
+                    .Select(v => new {
                         v.SkuVersionId,
                         v.VersionNumber,
                         v.CreatedAt
@@ -115,5 +116,37 @@ namespace BatchOptimization.Api.Controllers
             await _context.SaveChangesAsync();
             return NoContent();
         }
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> SkuWithVersionMeasurement(int id)
+        {
+            var sku = await _context.Skus
+                .Where(s => s.SkuId == id)
+                .Select(s => new
+                {
+                    s.SkuId,
+                    s.SkuName,
+                    SkuVersions = s.SkuVersions
+                    .Select(v => new
+                    {
+                        v.SkuVersionId,
+                        v.VersionNumber,
+                        v.VersionName,
+                        Measurements = v.SkuVersionMeasurements
+                        .Select(m => new
+                        {
+                            m.SkuVersionMeasurementId,
+                            m.MeasurementType,
+                            m.MeasurementValue
+                        })
+                    })
+                })
+                .FirstOrDefaultAsync();
+
+            if (sku == null)
+                return NotFound($"SKU with ID {id} not found.");
+
+            return Ok(sku);
+        }
+
     }
 }
