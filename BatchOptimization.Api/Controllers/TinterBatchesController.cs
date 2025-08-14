@@ -13,6 +13,7 @@ namespace BatchOptimization.Api.Controllers
     public class TinterBatchesController : ControllerBase
     {
         private readonly BatchDbContext _context;
+
         public TinterBatchesController(BatchDbContext context)
         {
             _context = context;
@@ -77,7 +78,6 @@ namespace BatchOptimization.Api.Controllers
 
             tinterBatch.UpdatedBy = userId;
             tinterBatch.UpdatedAt = DateTime.UtcNow;
-
             await _context.SaveChangesAsync();
 
             return Ok(tinterBatch);
@@ -96,7 +96,5 @@ namespace BatchOptimization.Api.Controllers
 
             return Ok($"Tinter batch with ID {id} deleted permanently.");
         }
-
-
     }
 };
