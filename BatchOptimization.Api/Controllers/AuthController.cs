@@ -24,12 +24,12 @@ namespace BatchOptimization.Api.Controllers
         {
             var user = await _context.Users
                 .Include(u => u.UserRole)
-                .FirstOrDefaultAsync(u => u.Username == dto.Username && u.IsActive);
+                .FirstOrDefaultAsync(u => u.Email == dto.Email && u.IsActive);
 
             if (user == null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
                 return Unauthorized("Invalid credentials.");
 
-            var token = _tokenGenerator.GenerateToken(user.UserId, user.Username, user.UserRole.RoleName);
+            var token = _tokenGenerator.GenerateToken(user.UserId, user.Email, user.UserRole.RoleName);
 
             return Ok(new LoginResponseDto
             {

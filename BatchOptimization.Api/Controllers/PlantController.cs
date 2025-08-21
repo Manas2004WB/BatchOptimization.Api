@@ -24,6 +24,7 @@ namespace BatchOptimization.Api.Controllers
         public async Task<IActionResult> GetPlant(int id)
         {
             var plant = await _context.Plants.FindAsync(id);
+       
             if (plant == null)
                 return NotFound();
 
