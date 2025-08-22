@@ -1,5 +1,6 @@
 ﻿using BatchOptimization.Api.Data;
 using BatchOptimization.Api.DTOs.TinterBatches;
+using BatchOptimization.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -96,5 +97,72 @@ namespace BatchOptimization.Api.Controllers
 
             return Ok($"Tinter batch with ID {id} deleted permanently.");
         }
+
+
+        // ✅ POST: api/TinterBatches/with-measurements
+        [HttpPost("with-measurements")]
+        [Authorize]
+        public async Task<IActionResult> CreateBatchWithMeasurements(
+            [FromBody] CreateTinterBatchWithMeasurementsDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            // 🔹 Get user ID from token
+            var userIdClaim = User.FindFirst("user_id")?.Value
+                ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+                return Unauthorized("Invalid or missing user_id claim.");
+
+            // 1️⃣ Create the Batch (entity should be singular: TinterBatch)
+            var batch = new Models.TinterBatches
+            {
+                TinterId = dto.TinterId,
+                TinterBatchCode = dto.TinterBatchCode,
+                BatchTinterName = dto.BatchTinterName,
+                Strength = dto.Strength,
+                Comments = dto.Comments,
+                IsActive = dto.IsActive,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                CreatedBy = userId,
+                UpdatedBy = userId
+            };
+
+            _context.TinterBatches.Add(batch);
+            await _context.SaveChangesAsync(); // Save first to generate BatchId
+
+            // 2️⃣ Create Measurements
+            foreach (var m in dto.Measurements)
+            {
+                var measurement = new Models.TinterBatchMeasurements
+                {
+                    TinterBatchId = batch.TinterBatchId, // ✅ attach generated id
+                    MeasurementType = m.MeasurementType,
+                    MeasurementValue = m.MeasurementValue
+                };
+
+                _context.TinterBatchMeasurements.Add(measurement);
+            }
+
+            await _context.SaveChangesAsync();
+
+            // 3️⃣ Return clean response (DTO instead of raw EF entity)
+            return Ok(new
+            {
+                BatchId = batch.TinterBatchId,
+                BatchCode = batch.TinterBatchCode,
+                batch.TinterId,
+                batch.BatchTinterName,
+                batch.Strength,
+                batch.Comments,
+                batch.IsActive,
+                batch.CreatedAt,
+                batch.UpdatedAt,
+                Measurements = dto.Measurements
+            });
+        }
+
     }
 };
