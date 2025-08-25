@@ -20,11 +20,27 @@ namespace BatchOptimization.Api.Controllers
             _context = context;
         }
         [HttpGet]
-        public async Task<IActionResult> GetTinters()
+        public async Task<IActionResult> GetTinterBatches()
         {
             var tinterBatches = await _context.TinterBatches.ToListAsync();
             return Ok(tinterBatches);
         }
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> GetTinterBatchesForTinterId(int id)
+        {
+            // fetch tinter batches by TinterId
+            var tinterBatches = await _context.TinterBatches
+                .Where(tb => tb.TinterId == id)
+                .OrderByDescending(tb => tb.CreatedAt) // optional: newest first
+                .ToListAsync();
+
+            if (tinterBatches == null || !tinterBatches.Any())
+                return NotFound($"No batches found for TinterId {id}");
+
+            return Ok(tinterBatches);
+        }
+
+
         [Authorize]
         [HttpPost]
         public async Task<IActionResult> CreateTinterBatch([FromBody] DTOs.TinterBatches.CreateTinterBatchesDto dto)
@@ -152,7 +168,7 @@ namespace BatchOptimization.Api.Controllers
             return Ok(new
             {
                 BatchId = batch.TinterBatchId,
-                BatchCode = batch.TinterBatchCode,
+                TinterBatchCode = batch.TinterBatchCode,
                 batch.TinterId,
                 batch.BatchTinterName,
                 batch.Strength,
@@ -163,6 +179,38 @@ namespace BatchOptimization.Api.Controllers
                 Measurements = dto.Measurements
             });
         }
+        [HttpGet("{tinterId:int}/with-measurements")]
+        public async Task<IActionResult> GetTinterBatchesWithMeasurements(int tinterId)
+        {
+            // 🔹 Fetch batches and include measurements
+            var batches = await _context.TinterBatches
+                .Where(b => b.TinterId == tinterId)
+                .Select(b => new
+                {
+                    b.TinterBatchId,
+                    b.TinterBatchCode,
+                    b.BatchTinterName,
+                    b.Strength,
+                    b.Comments,
+                    b.IsActive,
+                    b.CreatedAt,
+                    b.UpdatedAt,
+                    Measurements = b.TinterBatchMeasurements
+                        .Select(m => new
+                        {
+                            m.TinterBatchMeasurementId,
+                            m.MeasurementType,
+                            m.MeasurementValue
+                        }).ToList()
+                })
+                .ToListAsync();
+
+            if (batches == null || !batches.Any())
+                return NotFound($"No batches found for TinterId {tinterId}");
+
+            return Ok(batches);
+        }
+
 
     }
 };

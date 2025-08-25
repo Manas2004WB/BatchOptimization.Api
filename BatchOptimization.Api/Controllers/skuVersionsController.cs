@@ -1,6 +1,8 @@
 ﻿using BatchOptimization.Api.Data;
 using BatchOptimization.Api.DTOs.Sku;
 using BatchOptimization.Api.DTOs.SkuVersions;
+using BatchOptimization.Api.DTOs.SkuWithVersion;
+using BatchOptimization.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -115,6 +117,53 @@ namespace BatchOptimization.Api.Controllers
 
             return Ok(skuVersion);
         }
+        [HttpGet("{plantId}/with-versions")]
+        public async Task<ActionResult<IEnumerable<SkuWithVersionsDto>>> GetSkusWithVersions(int plantId)
+        {
+            var skus = await _context.Skus
+                .Where(s => s.PlantId == plantId)
+                .Include(s => s.SkuVersions)
+                    .ThenInclude(v => v.SkuVersionMeasurements)
+                .Include(s => s.SkuVersions)
+                    .ThenInclude(v => v.StandardRecipes)
+                        .ThenInclude(r => r.Tinter)
+                .ToListAsync();
 
+            var dto = skus.Select(sku => new SkuWithVersionsDto
+            {
+                SkuId = sku.SkuId,
+                SkuName = sku.SkuName,
+                SkuVersions = sku.SkuVersions.Select(v => new SkuVersionDto
+                {
+                    SkuVersionId = v.SkuVersionId,
+                    SkuRevision = v.VersionNumber,
+                    SkuCode = sku.SkuName, // You can customize if code differs
+                    StdLiquid = MapMeasurement(v.SkuVersionMeasurements, "liquid"),
+                    PanelColor = MapMeasurement(v.SkuVersionMeasurements, "panel"),
+                    SpectroColor = MapMeasurement(v.SkuVersionMeasurements, "colorimeter"),
+                    TargetDeltaE = v.SkuVersionMeasurements
+                                    .FirstOrDefault(m => m.MeasurementType == "target_delta_e")?.MeasurementValue,
+                    StdTinters = v.StandardRecipes.Select(r => new TinterDto
+                    {
+                        TinterId = r.TinterId,
+                        TinterCode = r.Tinter.TinterCode
+                    }).ToList(),
+                    UpdatedAt = v.UpdatedAt,
+                    Comments = v.Comments
+                }).ToList()
+            }).ToList();
+
+            return Ok(dto);
+        }
+
+        private MeasurementDto MapMeasurement(IEnumerable<SkuVersionMeasurements> measurements, string typePrefix)
+        {
+            return new MeasurementDto
+            {
+                L = measurements.FirstOrDefault(m => m.MeasurementType == $"{typePrefix}_l")?.MeasurementValue,
+                A = measurements.FirstOrDefault(m => m.MeasurementType == $"{typePrefix}_a")?.MeasurementValue,
+                B = measurements.FirstOrDefault(m => m.MeasurementType == $"{typePrefix}_b")?.MeasurementValue
+            };
+        }
     }
 }
