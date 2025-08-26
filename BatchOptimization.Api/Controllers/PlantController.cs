@@ -38,6 +38,8 @@ namespace BatchOptimization.Api.Controllers
             var plants = await _context.Plants.ToListAsync();
             return Ok(plants);
         }
+
+
         [Authorize]
         [HttpPost]
         public async Task<IActionResult> CreatePlant([FromBody] CreatePlantDto dto)

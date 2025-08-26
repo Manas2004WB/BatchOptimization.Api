@@ -118,7 +118,21 @@ namespace BatchOptimization.Api.Controllers
             if (tinter == null) return NotFound();
             return Ok(tinter);
         }
-
+        [HttpGet("plant/{plantId:int}")]
+        public async Task<IActionResult> GetTintersByPlant(int plantId)
+        {
+            var tinters = await _context.Tinters
+                .Where(t => t.PlantId == plantId)
+                .Select(t => new
+                {
+                    t.TinterId,
+                    t.PlantId,
+                    t.TinterCode,
+                    t.IsActive,
+                })
+                .ToListAsync();
+            return Ok(tinters);
+        }
         [Authorize]
         [HttpPost("full/")]
         public async Task<IActionResult> CreateTinterWithBatchesAndMeasurements([FromBody] CreateTinterWithBatchesDto dto)

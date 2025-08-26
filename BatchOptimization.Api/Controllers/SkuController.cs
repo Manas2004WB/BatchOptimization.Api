@@ -116,195 +116,118 @@ namespace BatchOptimization.Api.Controllers
             await _context.SaveChangesAsync();
             return NoContent();
         }
-        //[HttpGet("{id:int}")]
-        //public async Task<IActionResult> SkuWithVersionMeasurement(int id)
-        //{
-        //    var sku = await _context.Skus
-        //        .Where(s => s.SkuId == id)
-        //        .Select(s => new
-        //        {
-        //            s.SkuId,
-        //            s.SkuName,
-        //            SkuVersions = s.SkuVersions
-        //            .Select(v => new
-        //            {
-        //                v.SkuVersionId,
-        //                v.VersionNumber,
-        //                v.VersionName,
-        //                Measurements = v.SkuVersionMeasurements
-        //                .Select(m => new
-        //                {
-        //                    m.SkuVersionMeasurementId,
-        //                    m.MeasurementType,
-        //                    m.MeasurementValue
-        //                })
-        //            })
-        //        })
-        //        .FirstOrDefaultAsync();
 
-        //    if (sku == null)
-        //        return NotFound($"SKU with ID {id} not found.");
-
-        //    return Ok(sku);
-        //}
-        //[HttpGet("{id:int}/with-version-measurements")]
-        //public async Task<IActionResult> SkuWithVersionMeasurement(int id)
-        //{
-        //    var sku = await _context.Skus
-        //        .Where(s => s.SkuId == id)
-        //        .Select(s => new
-        //        {
-        //            s.SkuId,
-        //            s.SkuName,
-        //            SkuVersions = s.SkuVersions.Select(v => new
-        //            {
-        //                v.SkuVersionId,
-        //                SkuRevision = v.VersionNumber,
-        //                SkuCode = s.SkuName, // Or replace with real SKU Code field if you have one
-        //                StdLiquid = new
-        //                {
-        //                    L = v.SkuVersionMeasurements
-        //                        .Where(m => m.MeasurementType == "liquid_l")
-        //                        .Select(m => m.MeasurementValue)
-        //                        .FirstOrDefault(),
-        //                    A = v.SkuVersionMeasurements
-        //                        .Where(m => m.MeasurementType == "liquid_a")
-        //                        .Select(m => m.MeasurementValue)
-        //                        .FirstOrDefault(),
-        //                    B = v.SkuVersionMeasurements
-        //                        .Where(m => m.MeasurementType == "liquid_b")
-        //                        .Select(m => m.MeasurementValue)
-        //                        .FirstOrDefault()
-        //                },
-        //                PanelColor = new
-        //                {
-        //                    L = v.SkuVersionMeasurements
-        //                        .Where(m => m.MeasurementType == "panel_l")
-        //                        .Select(m => m.MeasurementValue)
-        //                        .FirstOrDefault(),
-        //                    A = v.SkuVersionMeasurements
-        //                        .Where(m => m.MeasurementType == "panel_a")
-        //                        .Select(m => m.MeasurementValue)
-        //                        .FirstOrDefault(),
-        //                    B = v.SkuVersionMeasurements
-        //                        .Where(m => m.MeasurementType == "panel_b")
-        //                        .Select(m => m.MeasurementValue)
-        //                        .FirstOrDefault()
-        //                },
-        //                SpectroColor = new
-        //                {
-        //                    L = v.SkuVersionMeasurements
-        //                        .Where(m => m.MeasurementType == "colorimeter_l")
-        //                        .Select(m => m.MeasurementValue)
-        //                        .FirstOrDefault(),
-        //                    A = v.SkuVersionMeasurements
-        //                        .Where(m => m.MeasurementType == "colorimeter_a")
-        //                        .Select(m => m.MeasurementValue)
-        //                        .FirstOrDefault(),
-        //                    B = v.SkuVersionMeasurements
-        //                        .Where(m => m.MeasurementType == "colorimeter_b")
-        //                        .Select(m => m.MeasurementValue)
-        //                        .FirstOrDefault()
-        //                },
-        //                TargetDeltaE= v.SkuVersionMeasurements
-        //                    .Where(m => m.MeasurementType == "target_delta_e")
-        //                    .Select(m => m.MeasurementValue)
-        //                    .FirstOrDefault(),
-        //                StdTinters = v.StandardRecipes.Select(r => new
-        //                {
-        //                    r.TinterId,
-        //                    r.Tinter.TinterCode,
-
-        //                }),
-        //                v.UpdatedAt,
-        //                v.Comments
-        //            })
-        //        })
-        //        .FirstOrDefaultAsync();
-
-        //    if (sku == null)
-        //        return NotFound($"SKU with ID {id} not found.");
-
-        //    return Ok(sku);
-        //}
-        [HttpGet("{plantId}/with-version-measurements")]
-        public async Task<IActionResult> SkusWithVersionMeasurements(int plantId)
+        [Authorize]
+        [HttpPost("with-measurements")]
+        public async Task<IActionResult> CreateSkuWithVersion([FromBody] CreateSkuWithVersionDto dto)
         {
-            var skus = await _context.Skus
-                .Where(s => s.PlantId == plantId)
-                .Select(s => new
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var userIdClaim = User.FindFirst("user_id")?.Value
+                  ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+                return Unauthorized("Invalid user ID.");
+
+            // CASE 1: Check if SKU exists
+            var existingSku = await _context.Skus
+                .Include(s => s.SkuVersions)
+                .FirstOrDefaultAsync(s => s.SkuName == dto.SkuCode && s.PlantId == dto.PlantId);
+
+            Skus sku;
+            int newVersionNumber;
+
+            if (existingSku == null)
+            {
+                // Create new SKU
+                sku = new Skus
                 {
-                    s.SkuId,
-                    s.SkuName,
-                    SkuVersions = s.SkuVersions.Select(v => new
+                    PlantId = dto.PlantId,
+                    SkuName = dto.SkuCode,
+                    IsActive = true,
+                    CreatedBy = userId,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedBy = userId,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                _context.Skus.Add(sku);
+                await _context.SaveChangesAsync();
+
+                newVersionNumber = 1;
+            }
+            else
+            {
+                sku = existingSku;
+                newVersionNumber = sku.SkuVersions.Max(v => v.VersionNumber) + 1;
+            }
+
+            // Create SKU Version
+            var skuVersion = new SkuVersions
+            {
+                SkuId = sku.SkuId,
+                VersionNumber = newVersionNumber,
+                VersionName = $"{dto.SkuCode}_V{newVersionNumber}",
+                ProductTypeId = 1, // ⚠️ you might want this from dto
+                ColorimeterInstrumentId = 1, // ⚠️ or from dto
+                IsDefault = true,
+                Comments = dto.Comments,
+                IsActive = true,
+                CreatedBy = userId,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedBy = userId,
+                UpdatedAt = DateTime.UtcNow
+            };
+            _context.SkuVersions.Add(skuVersion);
+            await _context.SaveChangesAsync();
+
+            // Add Measurements
+            var measurements = new List<SkuVersionMeasurements>
+            {
+                new() { SkuVersionId = skuVersion.SkuVersionId, MeasurementType = "liquid_l", MeasurementValue = dto.StdLiquid.L },
+                new() { SkuVersionId = skuVersion.SkuVersionId, MeasurementType = "liquid_a", MeasurementValue = dto.StdLiquid.A },
+                new() { SkuVersionId = skuVersion.SkuVersionId, MeasurementType = "liquid_b", MeasurementValue = dto.StdLiquid.B },
+
+                new() { SkuVersionId = skuVersion.SkuVersionId, MeasurementType = "panel_l", MeasurementValue = dto.PanelColor.L },
+                new() { SkuVersionId = skuVersion.SkuVersionId, MeasurementType = "panel_a", MeasurementValue = dto.PanelColor.A },
+                new() { SkuVersionId = skuVersion.SkuVersionId, MeasurementType = "panel_b", MeasurementValue = dto.PanelColor.B },
+
+                new() { SkuVersionId = skuVersion.SkuVersionId, MeasurementType = "colorimeter_l", MeasurementValue = dto.SpectroColor.L },
+                new() { SkuVersionId = skuVersion.SkuVersionId, MeasurementType = "colorimeter_a", MeasurementValue = dto.SpectroColor.A },
+                new() { SkuVersionId = skuVersion.SkuVersionId, MeasurementType = "colorimeter_b", MeasurementValue = dto.SpectroColor.B },
+
+                new() { SkuVersionId = skuVersion.SkuVersionId, MeasurementType = "target_delta_e", MeasurementValue = dto.TargetDeltaE }
+            };
+
+            _context.SkuVersionMeasurements.AddRange(measurements);
+
+            // Add Standard Recipe (Tinters)
+            if (dto.StdTinters != null)
+            {
+                foreach (var tinter in dto.StdTinters)
+                {
+                    _context.StandardRecipes.Add(new StandardRecipes
                     {
-                        v.SkuVersionId,
-                        SkuRevision = v.VersionNumber,
-                        SkuCode = s.SkuName, // Or use actual SKU Code if you have one
-                        StdLiquid = new
-                        {
-                            L = v.SkuVersionMeasurements
-                                .Where(m => m.MeasurementType == "liquid_l")
-                                .Select(m => m.MeasurementValue)
-                                .FirstOrDefault(),
-                            A = v.SkuVersionMeasurements
-                                .Where(m => m.MeasurementType == "liquid_a")
-                                .Select(m => m.MeasurementValue)
-                                .FirstOrDefault(),
-                            B = v.SkuVersionMeasurements
-                                .Where(m => m.MeasurementType == "liquid_b")
-                                .Select(m => m.MeasurementValue)
-                                .FirstOrDefault()
-                        },
-                        PanelColor = new
-                        {
-                            L = v.SkuVersionMeasurements
-                                .Where(m => m.MeasurementType == "panel_l")
-                                .Select(m => m.MeasurementValue)
-                                .FirstOrDefault(),
-                            A = v.SkuVersionMeasurements
-                                .Where(m => m.MeasurementType == "panel_a")
-                                .Select(m => m.MeasurementValue)
-                                .FirstOrDefault(),
-                            B = v.SkuVersionMeasurements
-                                .Where(m => m.MeasurementType == "panel_b")
-                                .Select(m => m.MeasurementValue)
-                                .FirstOrDefault()
-                        },
-                        SpectroColor = new
-                        {
-                            L = v.SkuVersionMeasurements
-                                .Where(m => m.MeasurementType == "colorimeter_l")
-                                .Select(m => m.MeasurementValue)
-                                .FirstOrDefault(),
-                            A = v.SkuVersionMeasurements
-                                .Where(m => m.MeasurementType == "colorimeter_a")
-                                .Select(m => m.MeasurementValue)
-                                .FirstOrDefault(),
-                            B = v.SkuVersionMeasurements
-                                .Where(m => m.MeasurementType == "colorimeter_b")
-                                .Select(m => m.MeasurementValue)
-                                .FirstOrDefault()
-                        },
-                        TargetDeltaE = v.SkuVersionMeasurements
-                            .Where(m => m.MeasurementType == "target_delta_e")
-                            .Select(m => m.MeasurementValue)
-                            .FirstOrDefault(),
-                        StdTinters = v.StandardRecipes.Select(r => new
-                        {
-                            r.TinterId,
-                            r.Tinter.TinterCode
-                        }),
-                        v.UpdatedAt,
-                        v.Comments
-                    })
-                })
-                .ToListAsync();
+                        SkuVersionId = skuVersion.SkuVersionId,
+                        TinterId = tinter.TinterId,   
+                        UpdateNumber = 1,
+                        CreatedBy = userId,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedBy = userId,
+                        UpdatedAt = DateTime.UtcNow
+                    });
+                }
+            }
 
-            if (!skus.Any())
-                return NotFound($"No SKUs found for PlantId {plantId}");
 
-            return Ok(skus);
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                Message = existingSku == null ? "New SKU created with version 1" : "New version added to existing SKU",
+                SkuId = sku.SkuId,
+                SkuVersionId = skuVersion.SkuVersionId
+            });
         }
 
     }
