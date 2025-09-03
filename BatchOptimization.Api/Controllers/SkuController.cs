@@ -116,7 +116,6 @@ namespace BatchOptimization.Api.Controllers
             await _context.SaveChangesAsync();
             return NoContent();
         }
-
         [Authorize]
         [HttpPost("with-measurements")]
         public async Task<IActionResult> CreateSkuWithVersion([FromBody] CreateSkuWithVersionDto dto)
@@ -229,6 +228,38 @@ namespace BatchOptimization.Api.Controllers
                 SkuVersionId = skuVersion.SkuVersionId
             });
         }
-
+       
+        [HttpGet("GetTargetDeltaEBySkuVersion/{skuVersionId:int}")]
+        public async Task<IActionResult> GetTargetDeltaEBySkuVersion(int skuVersionId)
+        {
+            var targetDeltaE = await _context.SkuVersionMeasurements
+                .Where(m => m.SkuVersionId == skuVersionId && m.MeasurementType == "target_delta_e")
+                .Select(m => m.MeasurementValue)
+                .FirstOrDefaultAsync();
+            if (targetDeltaE == 0)
+                return NotFound("Target ΔE not found for the specified SKU version.");
+            return Ok(new { SkuVersionId = skuVersionId, TargetDeltaE = targetDeltaE });
+        }
+        [HttpGet("GetSkuForGivenPlant/{plantId:int}")]
+        public async Task<IActionResult> GetSkuForGivenPlant(int plantId)
+        {
+            var skus = await _context.Skus
+                .Where(s => s.PlantId == plantId).ToListAsync();
+            return Ok(skus);
+        }
+        [HttpGet("GetSkuVersionsForGivenSku/{skuId:int}")]
+        public async Task<IActionResult> GetSkuVersionsForGivenSku(int skuId)
+        {
+            var skuVersions = await _context.SkuVersions
+                .Where(v => v.SkuId == skuId)
+                .Select(v => new {
+                    v.SkuVersionId,
+                    v.VersionNumber,
+                    v.VersionName,
+                    v.CreatedAt
+                })
+                .ToListAsync();
+            return Ok(skuVersions);
+        }
     }
 }

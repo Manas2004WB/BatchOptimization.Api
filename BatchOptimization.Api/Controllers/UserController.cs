@@ -72,6 +72,14 @@ namespace BatchOptimization.Api.Controllers
 
             return CreatedAtAction(nameof(GetUsers), new { id = user.UserId }, response);
         }
+        [HttpGet("{id:int}/GetUernameByID")]
+        public async Task<ActionResult<string>> GetUernameByID(int id) 
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user == null || !user.IsActive)
+                return NotFound("User not found.");
+            return Ok(user.Username);
+        }
     }
 
 }
