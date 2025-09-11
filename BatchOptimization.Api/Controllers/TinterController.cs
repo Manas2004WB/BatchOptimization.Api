@@ -21,7 +21,9 @@ namespace BatchOptimization.Api.Controllers
         [HttpGet]
         public async Task<IActionResult> GetTinters()
         {
-            var tinters = await _context.Tinters.ToListAsync();
+            var tinters = await _context.Tinters
+                .OrderByDescending(t=>t.UpdatedAt)
+                .ToListAsync();
             return Ok(tinters);
         }
         [Authorize]

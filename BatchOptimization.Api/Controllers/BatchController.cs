@@ -25,35 +25,6 @@ namespace BatchOptimization.Api.Controllers
             return Ok(bactches);
         }
         [Authorize]
-        //[HttpPost]
-        //public async Task<IActionResult> CreateBatch([FromBody] CreateBranchDto dto)
-        //{
-
-        //    if (!ModelState.IsValid)
-        //        return BadRequest(ModelState);
-        //    var userIdClaim = User.FindFirst("user_id")?.Value
-        //          ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        //    if (string.IsNullOrEmpty(userIdClaim))
-        //        return Unauthorized("User ID not found in token.");
-
-        //    if (!int.TryParse(userIdClaim, out var userId))
-        //        return Unauthorized("Invalid user ID format.");
-        //    var batch = new Models.Batches
-        //    {
-        //        SkuVersionId = dto.SkuVersionId,
-        //        BatchCode = dto.BatchCode,
-        //        BatchSize = dto.BatchSize,
-        //        BatchStatusId = dto.BatchStatusId,
-        //        CreatedAt = DateTime.UtcNow,
-        //        CreatedBy = userId,
-        //        UpdatedAt = DateTime.UtcNow,
-        //        UpdatedBy = userId,
-        //    };
-        //    _context.Batches.Add(batch);
-        //    await _context.SaveChangesAsync();
-        //    return Ok(batch);
-        //}
-        [Authorize]
         [HttpPut("{id:int}")]
         public async Task<IActionResult> UpdateBatch(int id, [FromBody] UpdateBranchDto dto)
         {
@@ -116,7 +87,7 @@ namespace BatchOptimization.Api.Controllers
                             b.SkuVersion.Sku.SkuName
                         }
                     }
-                })
+                }).OrderByDescending(b=>b.UpdatedAt)
                 .ToListAsync();
 
             return Ok(batches);
