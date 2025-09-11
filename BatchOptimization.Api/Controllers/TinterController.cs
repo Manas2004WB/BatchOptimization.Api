@@ -79,13 +79,36 @@ namespace BatchOptimization.Api.Controllers
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteTinter(int id)
         {
-            var tinter = await _context.Tinters.FindAsync(id);
+            var tinter = await _context.Tinters
+                .Include(t => t.TinterBatches)
+                    .ThenInclude(tb => tb.TinterBatchMeasurements)
+                .FirstOrDefaultAsync(t => t.TinterId == id);
+
             if (tinter == null)
                 return NotFound();
+
+            if (tinter.TinterBatches != null && tinter.TinterBatches.Any())
+            {
+                foreach (var batch in tinter.TinterBatches)
+                {
+                    if (batch.TinterBatchMeasurements != null && batch.TinterBatchMeasurements.Any())
+                    {
+                        _context.TinterBatchMeasurements.RemoveRange(batch.TinterBatchMeasurements);
+                    }
+                }
+
+                // ✅ remove batches themselves after their measurements are removed
+                _context.TinterBatches.RemoveRange(tinter.TinterBatches);
+            }
+
+            // ✅ finally remove tinter
             _context.Tinters.Remove(tinter);
+
             await _context.SaveChangesAsync();
-            return (Ok(new { message = "Tinter deleted successfully." }));
+
+            return Ok(new { message = "Tinter and related batches deleted successfully." });
         }
+
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetAllInfoForTinter(int id)
         {
