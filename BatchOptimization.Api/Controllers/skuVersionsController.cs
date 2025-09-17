@@ -121,13 +121,17 @@ namespace BatchOptimization.Api.Controllers
         public async Task<ActionResult<IEnumerable<SkuWithVersionsDto>>> GetSkusWithVersions(int plantId)
         {
             var skus = await _context.Skus
-                .Where(s => s.PlantId == plantId)
-                .Include(s => s.SkuVersions)
-                    .ThenInclude(v => v.SkuVersionMeasurements)
-                .Include(s => s.SkuVersions)
-                    .ThenInclude(v => v.StandardRecipes)
-                        .ThenInclude(r => r.Tinter)
-                .ToListAsync();
+            .Where(s => s.PlantId == plantId)
+            .Include(s => s.SkuVersions)
+                .ThenInclude(v => v.SkuVersionMeasurements)
+            .Include(s => s.SkuVersions)
+                .ThenInclude(v => v.StandardRecipes)
+                    .ThenInclude(r => r.Tinter)
+            .Include(s => s.SkuVersions) // 👈 include batches
+                .ThenInclude(v => v.Batches)
+            .OrderByDescending(s => s.UpdatedAt) // 👈 careful: OrderBy on `s` not `v`
+            .ToListAsync();
+
 
             var dto = skus.Select(sku => new SkuWithVersionsDto
             {
@@ -147,6 +151,15 @@ namespace BatchOptimization.Api.Controllers
                     {
                         TinterId = r.TinterId,
                         TinterCode = r.Tinter.TinterCode
+                    }).ToList(),
+                    Batches = v.Batches.Select(b => new SkuBatchDto
+                    {
+                        BatchId = b.BatchId,
+                        BatchCode = b.BatchCode,
+                        BatchSize = b.BatchSize,
+                        BatchStatusId = b.BatchStatusId,
+                        CreatedAt = b.CreatedAt,
+                        UpdatedAt = b.UpdatedAt
                     }).ToList(),
                     UpdatedAt = v.UpdatedAt,
                     Comments = v.Comments

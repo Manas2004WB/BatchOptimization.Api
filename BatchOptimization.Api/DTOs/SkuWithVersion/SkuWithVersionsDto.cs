@@ -20,6 +20,9 @@
 
         public List<TinterDto> StdTinters { get; set; } = new();
 
+        // ✅ New property for batches
+        public List<SkuBatchDto> Batches { get; set; } = new();
+
         public double? TargetDeltaE { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public string? Comments { get; set; }
@@ -38,4 +41,14 @@
         public string TinterCode { get; set; } = null!;
     }
 
+    // ✅ New DTO for batches
+    public class SkuBatchDto
+    {
+        public int BatchId { get; set; }
+        public string BatchCode { get; set; } = null!;
+        public double? BatchSize { get; set; }
+        public int BatchStatusId { get; set; }
+        public DateTime? CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
+    }
 }

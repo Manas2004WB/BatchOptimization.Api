@@ -35,9 +35,32 @@ namespace BatchOptimization.Api.Controllers
         [HttpGet]
         public async Task<IActionResult> GetPlants()
         {
-            var plants = await _context.Plants.ToListAsync();
+            var plants = await _context.Plants
+                .Include(p => p.Skus)
+                .Include(p => p.Tinters)
+                .OrderByDescending(p => p.UpdatedAt)
+                .Select(p => new GetPlantDto
+                {
+                    PlantId = p.PlantId,
+                    PlantName = p.PlantName,
+                    IsActive = p.IsActive,
+                    Skus = p.Skus.Select(s => new SkuDto
+                    {
+                        SkuId = s.SkuId,
+                        SkuName = s.SkuName
+                    }).ToList(),
+                    Tinters = p.Tinters.Select(t => new TinterDto
+                    {
+                        TinterId = t.TinterId,
+                        TinterName = t.TinterCode
+                    }).ToList()
+                })
+                .ToListAsync();
+
             return Ok(plants);
         }
+
+
 
 
         [Authorize]
