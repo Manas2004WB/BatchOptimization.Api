@@ -117,36 +117,113 @@ namespace BatchOptimization.Api.Controllers
 
             return Ok(skuVersion);
         }
-        [HttpGet("{plantId}/with-versions")]
-        public async Task<ActionResult<IEnumerable<SkuWithVersionsDto>>> GetSkusWithVersions(int plantId)
+        [HttpGet("{plantId}/with-latest-version")]
+        public async Task<ActionResult<IEnumerable<SkuWithVersionsDto>>> GetSkusWithLatestVersion(int plantId)
         {
             var skus = await _context.Skus
-            .Where(s => s.PlantId == plantId)
-            .Include(s => s.SkuVersions)
-                .ThenInclude(v => v.SkuVersionMeasurements)
-            .Include(s => s.SkuVersions)
-                .ThenInclude(v => v.StandardRecipes)
-                    .ThenInclude(r => r.Tinter)
-            .Include(s => s.SkuVersions) // 👈 include batches
-                .ThenInclude(v => v.Batches)
-            .OrderByDescending(s => s.UpdatedAt) // 👈 careful: OrderBy on `s` not `v`
-            .ToListAsync();
+                .Where(s => s.PlantId == plantId)
+                .Include(s => s.SkuVersions)
+                    .ThenInclude(v => v.SkuVersionMeasurements)
+                .Include(s => s.SkuVersions)
+                    .ThenInclude(v => v.StandardRecipes)
+                        .ThenInclude(r => r.Tinter)
+                .Include(s => s.SkuVersions) // include batches too
+                    .ThenInclude(v => v.Batches)
+                .OrderByDescending(s => s.UpdatedAt)
+                .ToListAsync();
 
-
-            var dto = skus.Select(sku => new SkuWithVersionsDto
+            var dto = skus.Select(sku =>
             {
-                SkuId = sku.SkuId,
-                SkuName = sku.SkuName,
-                SkuVersions = sku.SkuVersions.Select(v => new SkuVersionDto
+                // 👇 pick the latest version (highest revision)
+                var latestVersion = sku.SkuVersions
+                    .OrderByDescending(v => v.VersionNumber)
+                    .FirstOrDefault();
+
+                if (latestVersion == null) return null;
+
+                return new SkuWithVersionsDto
+                {
+                    SkuId = sku.SkuId,
+                    SkuName = sku.SkuName,
+                    // return only the latest version as a single-item list
+                    SkuVersions = new List<SkuVersionDto>
+                    {
+                            new SkuVersionDto
+                            {
+                                SkuVersionId = latestVersion.SkuVersionId,
+                                SkuRevision = latestVersion.VersionNumber,
+                                SkuCode = sku.SkuName, // or latestVersion.SkuCode if different
+                                StdLiquid = MapMeasurement(latestVersion.SkuVersionMeasurements, "liquid"),
+                                PanelColor = MapMeasurement(latestVersion.SkuVersionMeasurements, "panel"),
+                                SpectroColor = MapMeasurement(latestVersion.SkuVersionMeasurements, "colorimeter"),
+                                TargetDeltaE = latestVersion.SkuVersionMeasurements
+                                    .FirstOrDefault(m => m.MeasurementType == "target_delta_e")?.MeasurementValue,
+                                StdTinters = latestVersion.StandardRecipes.Select(r => new TinterDto
+                                {
+                                    TinterId = r.TinterId,
+                                    TinterCode = r.Tinter.TinterCode
+                                }).ToList(),
+                                Batches = latestVersion.Batches.Select(b => new SkuBatchDto
+                                {
+                                    BatchId = b.BatchId,
+                                    BatchCode = b.BatchCode,
+                                    BatchSize = b.BatchSize,
+                                    BatchStatusId = b.BatchStatusId,
+                                    CreatedAt = b.CreatedAt,
+                                    UpdatedAt = b.UpdatedAt
+                                }).ToList(),
+                                UpdatedAt = latestVersion.UpdatedAt,
+                                Comments = latestVersion.Comments
+                            }
+                    }
+                };
+            })
+            .Where(dto => dto != null) // filter nulls if any SKU has no versions
+            .ToList();
+
+            return Ok(dto);
+        }
+
+
+        [HttpGet("{skuId}/older-versions")]
+        public async Task<ActionResult<IEnumerable<SkuVersionDto>>> GetOlderVersions(int skuId)
+        {
+            var sku = await _context.Skus
+                .Where(s => s.SkuId == skuId)
+                .Include(s => s.SkuVersions)
+                    .ThenInclude(v => v.SkuVersionMeasurements)
+                .Include(s => s.SkuVersions)
+                    .ThenInclude(v => v.StandardRecipes)
+                        .ThenInclude(r => r.Tinter)
+                .Include(s => s.SkuVersions)
+                    .ThenInclude(v => v.Batches)
+                .FirstOrDefaultAsync();
+
+            if (sku == null)
+                return NotFound();
+
+            // find latest revision number
+            var latestRevision = sku.SkuVersions
+                .OrderByDescending(v => v.VersionNumber)
+                .FirstOrDefault()?.VersionNumber;
+
+            if (latestRevision == null)
+                return Ok(new List<SkuVersionDto>());
+
+            // filter only older versions
+            var olderVersions = sku.SkuVersions
+                .Where(v => v.VersionNumber < latestRevision)
+                .OrderByDescending(v => v.VersionNumber) // newest older first
+                .Select(v => new SkuVersionDto
                 {
                     SkuVersionId = v.SkuVersionId,
                     SkuRevision = v.VersionNumber,
-                    SkuCode = sku.SkuName, // You can customize if code differs
+                    SkuCode = sku.SkuName, // or v.SkuCode if different
                     StdLiquid = MapMeasurement(v.SkuVersionMeasurements, "liquid"),
                     PanelColor = MapMeasurement(v.SkuVersionMeasurements, "panel"),
                     SpectroColor = MapMeasurement(v.SkuVersionMeasurements, "colorimeter"),
                     TargetDeltaE = v.SkuVersionMeasurements
-                                    .FirstOrDefault(m => m.MeasurementType == "target_delta_e")?.MeasurementValue,
+                        .FirstOrDefault(m => m.MeasurementType == "target_delta_e")?.MeasurementValue,
                     StdTinters = v.StandardRecipes.Select(r => new TinterDto
                     {
                         TinterId = r.TinterId,
@@ -163,10 +240,10 @@ namespace BatchOptimization.Api.Controllers
                     }).ToList(),
                     UpdatedAt = v.UpdatedAt,
                     Comments = v.Comments
-                }).ToList()
-            }).ToList();
+                })
+                .ToList();
 
-            return Ok(dto);
+            return Ok(olderVersions);
         }
 
         private MeasurementDto MapMeasurement(IEnumerable<SkuVersionMeasurements> measurements, string typePrefix)
