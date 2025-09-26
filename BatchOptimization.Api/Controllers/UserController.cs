@@ -80,6 +80,7 @@ namespace BatchOptimization.Api.Controllers
                 return NotFound("User not found.");
             return Ok(user.Username);
         }
+
     }
 
 }
