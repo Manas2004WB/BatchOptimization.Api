@@ -29,7 +29,13 @@ namespace BatchOptimization.Api.Controllers
             if (user == null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
                 return Unauthorized("Invalid credentials.");
 
-            var token = _tokenGenerator.GenerateToken(user.UserId, user.Email, user.UserRole.RoleName);
+            var token = _tokenGenerator.GenerateToken(
+                user.UserId,          // userId
+                user.Username,        // username (sub)
+                user.UserRole.RoleName, // role
+                user.Email            // email
+            );
+
 
             return Ok(new LoginResponseDto
             {

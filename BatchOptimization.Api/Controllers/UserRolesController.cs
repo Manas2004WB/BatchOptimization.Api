@@ -23,19 +23,31 @@ namespace BatchOptimization.Api.Controllers
             var userRoles = await _context.UserRoles.ToListAsync();
             return Ok(userRoles);
         }
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> CreateUserRole([FromBody] CreateUserRoleDto dto)
         {
-
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
+
+            // ✅ Get logged-in userId from claims
             var userIdClaim = User.FindFirst("user_id")?.Value
                   ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
             if (string.IsNullOrEmpty(userIdClaim))
                 return Unauthorized("User ID not found in token.");
+
             if (!int.TryParse(userIdClaim, out var userId))
                 return Unauthorized("Invalid user ID format.");
+
+            // ✅ Fetch user from DB
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.UserId == userId);
+
+            if (user == null)
+                return Unauthorized("User not found.");
+
+            // ✅ Proceed to create role
             var userRole = new Models.UserRoles
             {
                 RoleName = dto.RoleName,
@@ -45,10 +57,13 @@ namespace BatchOptimization.Api.Controllers
                 CreatedBy = userId,
                 UpdatedBy = userId,
             };
+
             _context.UserRoles.Add(userRole);
             await _context.SaveChangesAsync();
+
             return Ok(userRole);
         }
+
         [Authorize]
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteUserRole(int id)
