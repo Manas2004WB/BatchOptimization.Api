@@ -63,7 +63,7 @@ namespace BatchOptimization.Api.Controllers
 
 
 
-        [Authorize]
+        [Authorize(Roles = "Admin,Operator")]
         [HttpPost]
         public async Task<IActionResult> CreatePlant([FromBody] CreatePlantDto dto)
         {
@@ -99,7 +99,7 @@ namespace BatchOptimization.Api.Controllers
 
             return CreatedAtAction(nameof(GetPlant), new { id = plant.PlantId }, plant);
         }
-        [Authorize]
+        [Authorize(Roles = "Admin,Operator")]
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeletePlant(int id)
         {
@@ -117,7 +117,7 @@ namespace BatchOptimization.Api.Controllers
             await _context.SaveChangesAsync();
             return NoContent();
         }
-        [Authorize]
+        [Authorize(Roles = "Admin,Operator")]
         [HttpPut("{id:int}")]
         public async Task<IActionResult> UpdatePlant(int id, [FromBody] CreatePlantDto dto)
         {

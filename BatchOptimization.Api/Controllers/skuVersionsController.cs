@@ -27,7 +27,7 @@ namespace BatchOptimization.Api.Controllers
             var skuVersions = await _context.SkuVersions.ToListAsync();
             return Ok(skuVersions);
         }
-        [Authorize]
+        [Authorize(Roles = "Admin,Operator")]
         [HttpPost]
         public async Task<IActionResult> CreateSkuVersion([FromBody] CreateSkuVersionDto dto)
         {
@@ -58,7 +58,7 @@ namespace BatchOptimization.Api.Controllers
             await _context.SaveChangesAsync();
             return CreatedAtAction(nameof(GetSkusVersions), new { id = skuVersion.SkuVersionId }, skuVersion);
         }
-        [Authorize]
+        [Authorize(Roles = "Admin,Operator")]
         [HttpPut("{id:int}")]
         public async Task<IActionResult> UpdateSkuVersion(int id, [FromBody] UpdateSkuVersionDto dto)
         {
@@ -94,6 +94,7 @@ namespace BatchOptimization.Api.Controllers
 
             return Ok(skuVersion);
         }
+        [Authorize(Roles = "Admin,Operator")]
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteSkuVersion(int id)
         {

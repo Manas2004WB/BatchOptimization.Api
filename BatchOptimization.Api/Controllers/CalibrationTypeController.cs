@@ -24,7 +24,7 @@ namespace BatchOptimization.Api.Controllers
             var calibrationStatus = await _context.CalibrationType.ToListAsync();
             return Ok(calibrationStatus);
         }
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> CreateCalibrationTypes([FromBody] CreateCalibrationTypesDto dto)
         {

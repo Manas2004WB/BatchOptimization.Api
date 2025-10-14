@@ -47,7 +47,7 @@ namespace BatchOptimization.Api.Controllers
             return Ok(sku);
         }
 
-        [Authorize]
+        [Authorize(Roles = "Admin,Operator")]
         [HttpPost]
         public async Task<IActionResult> CreateSku([FromBody] CreateSkuDto dto)
         {
@@ -76,7 +76,7 @@ namespace BatchOptimization.Api.Controllers
             return CreatedAtAction(nameof(GetSkuById), new { id = sku.SkuId }, sku);
         }
 
-        [Authorize]
+        [Authorize(Roles = "Admin,Operator")]
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteSku(int id)
         {
@@ -94,7 +94,7 @@ namespace BatchOptimization.Api.Controllers
             await _context.SaveChangesAsync();
             return NoContent();
         }
-        [Authorize]
+        [Authorize(Roles = "Admin,Operator")]
         [HttpPut("{id:int}")]
         public async Task<IActionResult> UpdateSku(int id, [FromBody] CreateSkuDto dto)
         {
@@ -116,7 +116,7 @@ namespace BatchOptimization.Api.Controllers
             await _context.SaveChangesAsync();
             return NoContent();
         }
-        [Authorize]
+        [Authorize(Roles = "Admin,Operator")]
         [HttpPost("with-measurements")]
         public async Task<IActionResult> CreateSkuWithVersion([FromBody] CreateSkuWithVersionDto dto)
         {

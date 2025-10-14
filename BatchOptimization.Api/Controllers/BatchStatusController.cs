@@ -25,7 +25,7 @@ namespace BatchOptimization.Api.Controllers
             var batchStatus = await _context.BatchStatuses.ToListAsync();
             return Ok(batchStatus);
         }
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> CreateBatchStatus([FromBody] CreateBatchStatusDto dto)
         {

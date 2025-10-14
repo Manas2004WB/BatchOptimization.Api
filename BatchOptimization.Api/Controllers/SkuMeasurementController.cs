@@ -23,7 +23,7 @@ namespace BatchOptimization.Api.Controllers
             var skusMeasurements = await _context.SkuVersionMeasurements.ToListAsync();
             return Ok(skusMeasurements);
         }
-        [Authorize]
+        [Authorize(Roles = "Admin,Operator")]
         [HttpPost]
         public async Task<IActionResult> CreateSkuMeasurement([FromBody] CreateSkuMeasurementDto dto)
         {
@@ -47,7 +47,7 @@ namespace BatchOptimization.Api.Controllers
             );
 
         }
-        [Authorize]
+        [Authorize(Roles = "Admin,Operator")]
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteSkuMeasurement(int id)
         {
@@ -69,7 +69,7 @@ namespace BatchOptimization.Api.Controllers
             // Return 204 No Content (standard for DELETE success)
             return NoContent();
         }
-        [Authorize]
+        [Authorize(Roles = "Admin,Operator")]
         [HttpPut("{id:int}")]
         public async Task<IActionResult> UpdateSkuMeasurement(int id, [FromBody] UpdateSkuMeasurementDto dto)
         {

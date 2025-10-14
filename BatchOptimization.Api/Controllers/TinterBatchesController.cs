@@ -41,7 +41,7 @@ namespace BatchOptimization.Api.Controllers
         }
 
 
-        [Authorize]
+        [Authorize(Roles = "Admin,Operator")]
         [HttpPost]
         public async Task<IActionResult> CreateTinterBatch([FromBody] DTOs.TinterBatches.CreateTinterBatchesDto dto)
         {
@@ -71,7 +71,7 @@ namespace BatchOptimization.Api.Controllers
             await _context.SaveChangesAsync();
             return Ok(tinterBatch);
         }
-        [Authorize]
+        [Authorize(Roles = "Admin,Operator")]
         [HttpPut("{id:int}")]
         public async Task<IActionResult> UpdateTinterBatch(int id, [FromBody] UpdateTinterBatchDto dto)
         {
@@ -99,7 +99,7 @@ namespace BatchOptimization.Api.Controllers
 
             return Ok(tinterBatch);
         }
-        [Authorize]
+        [Authorize(Roles = "Admin,Operator")]
         [HttpDelete("hard/{id:int}")]
         public async Task<IActionResult> HardDeleteTinterBatch(int id)
         {
@@ -117,7 +117,7 @@ namespace BatchOptimization.Api.Controllers
 
         // ✅ POST: api/TinterBatches/with-measurements
         [HttpPost("with-measurements")]
-        [Authorize]
+        [Authorize(Roles = "Admin,Operator")]
         public async Task<IActionResult> CreateBatchWithMeasurements(
             [FromBody] CreateTinterBatchWithMeasurementsDto dto)
         {
